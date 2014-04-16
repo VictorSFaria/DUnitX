@@ -44,7 +44,12 @@ uses
   DUnitX.SingleNameSpace in 'DUnitX.SingleNameSpace.pas',
   DUnitX.MemoryLeakMonitor.Default in '..\DUnitX.MemoryLeakMonitor.Default.pas',
   DUnitX.MemoryLeakMonitor.FastMM4 in '..\DUnitX.MemoryLeakMonitor.FastMM4.pas',
-  DUnitX.Tests.MemoryLeaks in 'DUnitX.Tests.MemoryLeaks.pas';
+  DUnitX.Tests.MemoryLeaks in 'DUnitX.Tests.MemoryLeaks.pas',
+  DUnitX.Extensibility in '..\DUnitX.Extensibility.pas',
+  DUnitX.Extensibility.PluginManager in '..\DUnitX.Extensibility.PluginManager.pas',
+  DUnitX.FixtureProviderPlugin in '..\DUnitX.FixtureProviderPlugin.pas';
+
+{$R *.res}
 
 var
   runner : ITestRunner;
@@ -76,11 +81,14 @@ begin
     //We don;t want this happening when running under CI.
     System.Write('Done.. press <Enter> key to quit.');
     System.Readln;
-
-
     {$ENDIF}
   except
     on E: Exception do
+    begin
       System.Writeln(E.ClassName, ': ', E.Message);
+      {$IFNDEF CI}
+      System.Readln;
+      {$ENDIF}
+    end;
   end;
 end.

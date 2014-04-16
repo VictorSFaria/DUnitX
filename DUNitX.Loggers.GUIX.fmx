@@ -3,7 +3,7 @@ object GUIXTestRunner: TGUIXTestRunner
   Top = 0
   Caption = 'DUNitX'
   ClientHeight = 480
-  ClientWidth = 767
+  ClientWidth = 908
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [dkDesktop, dkiPhone, dkiPad]
@@ -19,12 +19,12 @@ object GUIXTestRunner: TGUIXTestRunner
   object TopPanel: TPanel
     Align = alMostTop
     Height = 33.000000000000000000
-    Width = 767.000000000000000000
+    Width = 908.000000000000000000
     TabOrder = 0
     object ToolBar1: TToolBar
       Height = 33.000000000000000000
       TabOrder = 0
-      Width = 767.000000000000000000
+      Width = 908.000000000000000000
       object Button1: TButton
         Action = Run
         Height = 33.000000000000000000
@@ -36,12 +36,12 @@ object GUIXTestRunner: TGUIXTestRunner
   object Panel1: TPanel
     Align = alClient
     Height = 447.000000000000000000
-    Width = 767.000000000000000000
+    Width = 908.000000000000000000
     TabOrder = 1
     object GridPanelLayout1: TGridPanelLayout
       Align = alClient
       Height = 447.000000000000000000
-      Width = 302.000000000000000000
+      Width = 443.000000000000000000
       ColumnCollection = <
         item
           Value = 50.000381472636970000
@@ -82,13 +82,13 @@ object GUIXTestRunner: TGUIXTestRunner
         Align = alClient
         Height = 322.500000000000000000
         TabOrder = 0
-        Width = 151.001159667968800000
+        Width = 221.501693725585900000
         OnItemClick = FailListItemClick
       end
       object Panel2: TPanel
         Align = alClient
         Height = 124.500000000000000000
-        Width = 302.000000000000000000
+        Width = 443.000000000000000000
         TabOrder = 1
         object Label1: TLabel
           Font.Style = [fsBold]
@@ -144,7 +144,7 @@ object GUIXTestRunner: TGUIXTestRunner
           Height = 17.000000000000000000
           Position.X = 16.000000000000000000
           Position.Y = 80.000000000000000000
-          Text = 'Memory Leaked'
+          Text = 'Leaked'
           Width = 89.000000000000000000
         end
         object MemoryLeaked: TLabel
@@ -160,13 +160,13 @@ object GUIXTestRunner: TGUIXTestRunner
           Orientation = orHorizontal
           Position.X = 8.000000000000000000
           Position.Y = 8.000000000000000000
-          Width = 288.000000000000000000
+          Width = 429.000000000000000000
         end
       end
       object FailTestDetailPanel: TPanel
         Align = alClient
         Height = 322.500000000000000000
-        Width = 150.998840332031300000
+        Width = 221.498306274414100000
         TabOrder = 2
         object StackTrace: TMemo
           Touch.InteractiveGestures = [igPan, igLongTap, igDoubleTap]
@@ -175,7 +175,7 @@ object GUIXTestRunner: TGUIXTestRunner
           Height = 138.000000000000000000
           Position.Y = 184.500000000000000000
           TabOrder = 0
-          Width = 150.998840332031300000
+          Width = 221.498306274414100000
           ReadOnly = True
         end
         object Label3: TLabel
@@ -193,7 +193,7 @@ object GUIXTestRunner: TGUIXTestRunner
           Height = 17.000000000000000000
           Position.X = 8.000000000000000000
           Position.Y = 24.000000000000000000
-          Text = 'Start Time'
+          Text = 'Start'
           Width = 57.000000000000000000
         end
         object FailTestName: TLabel
@@ -203,7 +203,7 @@ object GUIXTestRunner: TGUIXTestRunner
           Position.X = 64.000000000000000000
           Position.Y = 8.000000000000000000
           Text = 'FailTestName'
-          Width = 69.000000000000000000
+          Width = 72.000000000000000000
           WordWrap = False
         end
         object FailTestStartTime: TLabel
@@ -211,21 +211,21 @@ object GUIXTestRunner: TGUIXTestRunner
           Position.X = 64.000000000000000000
           Position.Y = 24.000000000000000000
           Text = 'FailTestStartTime'
-          Width = 73.000000000000000000
+          Width = 121.000000000000000000
         end
         object Label7: TLabel
           Font.Style = [fsBold]
           StyledSettings = [ssFamily, ssSize, ssFontColor]
           Height = 17.000000000000000000
-          Position.X = 144.000000000000000000
-          Position.Y = 24.000000000000000000
-          Text = 'Finish Time'
+          Position.X = 8.000000000000000000
+          Position.Y = 40.000000000000000000
+          Text = 'Finish'
           Width = 65.000000000000000000
         end
         object FailTestFinishTime: TLabel
           Height = 17.000000000000000000
-          Position.X = 216.000000000000000000
-          Position.Y = 24.000000000000000000
+          Position.X = 63.000000000000000000
+          Position.Y = 40.000000000000000000
           Text = 'FailTestFinishTime'
           Width = 120.000000000000000000
         end
@@ -235,17 +235,17 @@ object GUIXTestRunner: TGUIXTestRunner
           StyledSettings = [ssFamily, ssSize, ssFontColor]
           Height = 21.000000000000000000
           Position.X = 8.000000000000000000
-          Position.Y = 167.000000000000000000
+          Position.Y = 166.500000000000000000
           Text = 'Stack Trace'
           Width = 275.000000000000000000
         end
         object FailTestMessage: TMemo
           Touch.InteractiveGestures = [igPan, igLongTap, igDoubleTap]
           Anchors = [akLeft, akTop, akRight, akBottom]
-          Height = 89.000000000000000000
-          Position.Y = 64.000000000000000000
+          Height = 73.000000000000000000
+          Position.Y = 80.000000000000000000
           TabOrder = 8
-          Width = 150.501007080078100000
+          Width = 221.499465942382800000
           ReadOnly = True
         end
         object Label8: TLabel
@@ -253,7 +253,7 @@ object GUIXTestRunner: TGUIXTestRunner
           StyledSettings = [ssFamily, ssSize, ssFontColor]
           Height = 17.000000000000000000
           Position.X = 8.000000000000000000
-          Position.Y = 48.000000000000000000
+          Position.Y = 56.000000000000000000
           Text = 'Message'
           Width = 120.000000000000000000
         end

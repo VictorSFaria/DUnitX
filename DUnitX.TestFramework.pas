@@ -35,6 +35,7 @@ uses
   Rtti,
   TimeSpan,
   DUnitX.Generics,
+  DUnitX.Extensibility,
   Generics.Collections;
 
 //TODO: Automatic support for https://code.google.com/p/delphi-code-coverage/ would be cool
@@ -156,9 +157,10 @@ type
   ///	  Marks a test method to be repeated count times.
   ///	</summary>
   ///	<remarks>
-  ///	  NOT IMPLEMENTED
+  ///	  If [RepeatTest(0]] used then the test will be skipped
+  ///   and behaves like IgnoreAttribute
   ///	</remarks>
-  RepeatAttribute = class(TCustomAttribute)
+  RepeatTestAttribute = class(TCustomAttribute)
   private
     FCount : Cardinal;
   public
@@ -166,7 +168,7 @@ type
     property Count : Cardinal read FCount;
   end;
 
-  TValueArray = array of TValue;
+  TValueArray = DUnitX.Extensibility.TValueArray;
 
 
   ///	<summary>
@@ -243,7 +245,8 @@ type
     property Values : TValueArray read GetValues;
   end;
 
-  TTestMethod = procedure of object;
+  TTestMethod = DUnitX.Extensibility.TTestMethod;
+
   TTestLocalMethod = reference to procedure;
 
   TLogLevel = (ltInformation, ltWarning, ltError);
@@ -272,12 +275,17 @@ type
 
 
   Assert = class
+  private
+    class procedure CheckExceptionClass(E: Exception; const exceptionClass: ExceptClass);
+    class function AddLineBreak(const msg: string): string;
   public
     class procedure Pass(const message : string = '');
     class procedure Fail(const message : string = ''; const errorAddrs : pointer = nil);
 
     class procedure AreEqual(const left : string; const right : string; const ignoreCase : boolean; const message : string);overload;
     class procedure AreEqual(const left : string; const right : string; const message : string = '');overload;
+    class procedure AreEqual(const left, right : Double; const tolerance : Double; const message : string = '');overload;
+    class procedure AreEqual(const left, right : Double; const message : string = '');overload;
     class procedure AreEqual(const left, right : Extended; const tolerance : Extended; const message : string = '');overload;
     class procedure AreEqual(const left, right : Extended; const message : string = '');overload;
     class procedure AreEqual(const left, right : TClass; const message : string = '');overload;
@@ -290,7 +298,13 @@ type
     class procedure AreEqualMemory(const left : Pointer; const right : Pointer; const size : Cardinal; message : string = '');
 
     class procedure AreNotEqual(const left : string; const right : string; const ignoreCase : boolean = true; const message : string = '');overload;
+
     class procedure AreNotEqual(const left, right : Extended; const tolerance : Extended; const message : string = '');overload;
+    class procedure AreNotEqual(const left, right : Extended; const message : string = '');overload;
+
+    class procedure AreNotEqual(const left, right : Double; const tolerance : double; const message : string = '');overload;
+    class procedure AreNotEqual(const left, right : Double; const message : string = '');overload;
+
     class procedure AreNotEqual(const left, right : TClass; const message : string = '');overload;
 {$IFDEF DELPHI_XE_UP}
     //Delphi 2010 compiler bug breaks this
@@ -346,6 +360,7 @@ type
 {$ENDIF}
 
     class procedure WillRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
+    class procedure WillRaiseWithMessage(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsg: string = ''; const msg : string = ''); overload;
     class procedure WillRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     class procedure WillNotRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     class procedure WillNotRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
@@ -543,8 +558,6 @@ type
     function GetIgnoredCount : integer;
     function GetSuccessRate : integer;
 
-    function GetFixtures : IEnumerable<ITestFixtureInfo>;
-
     function GetFixtureResults : IEnumerable<IFixtureResult>;
 
     function GetAllTestResults : IEnumerable<ITestResult>;
@@ -564,7 +577,6 @@ type
     //means all enabled/not ingored tests passed.
     property AllPassed : boolean read GetAllPassed;
 
-    property Fixtures : IEnumerable<ITestFixtureInfo> read GetFixtures;
     property FixtureResults : IEnumerable<IFixtureResult> read GetFixtureResults;
   end;
   {$M-}
@@ -738,6 +750,7 @@ type
   TDUnitX = class
   public class var
     RegisteredFixtures : TDictionary<TClass,string>;
+    RegisteredPlugins  : TList<IPlugin>;
   public
     class constructor Create;
     class destructor Destroy;
@@ -746,6 +759,7 @@ type
     class function CreateRunner(const ALogger : ITestLogger) : ITestRunner;overload;
     class function CreateRunner(const useCommandLineOptions : boolean; const ALogger : ITestLogger) : ITestRunner;overload;
     class procedure RegisterTestFixture(const AClass : TClass; const AName : string = '' );
+    class procedure RegisterPlugin(const plugin : IPlugin);
     class function CommandLine : ICommandLine;
     class function CurrentRunner : ITestRunner;
   end;
@@ -796,6 +810,7 @@ uses
   DUnitX.Commandline,
   DUnitX.IoC,
   DUnitX.MemoryLeakMonitor.Default,
+  DUnitX.FixtureProviderPlugin,
   Variants,
   Math,
   StrUtils,
@@ -912,22 +927,48 @@ begin
     else
     begin
       if leftValue.TryCast(pInfo,tInfo) then
-        Fail(Format('left %s but got %s - %s', [leftValue.AsString, rightValue.AsString, message]), ReturnAddress)
+        Fail(Format('left %s but got %s - %s', [leftValue.ToString, rightValue.ToString, message]), ReturnAddress)
       else
         Fail(Format('left is not equal to right - %s', [message]), ReturnAddress)
     end;
   end;
 end;
 {$ENDIF}
+
+class function Assert.AddLineBreak(const msg: string): string;
+begin
+  if msg <> '' then
+    Result :=  sLineBreak + msg
+  else
+    Result := '';
+end;
+
 class procedure Assert.AreEqual(const left, right: Integer; const message: string);
 begin
   if left <> right then
     Fail(Format('left %d but got %d - %s' ,[left, right, message]), ReturnAddress);
 end;
 
-class procedure Assert.AreEqual(const left, right: Extended; const message: string);
+class procedure Assert.AreEqual(const left, right, tolerance: Double; const message: string);
 begin
-  AreEqual(left, right, 0, message);
+  if not Math.SameValue(left,right,tolerance) then
+    Fail(Format('left %g but got %g - %s' ,[left,right,message]), ReturnAddress);
+end;
+
+class procedure Assert.AreEqual(const left, right: Double; const message: string);
+var
+  tolerance : Double;
+begin
+  tolerance := 0;
+  AreEqual(left, right, tolerance, message);
+end;
+
+class procedure Assert.AreEqual(const left, right: Extended; const message: string);
+var
+  tolerance : Extended;
+begin
+  tolerance := 0;
+  AreEqual(left, right, tolerance, message);
 end;
 
 class procedure Assert.AreEqualMemory(const left : Pointer; const right : Pointer; const size : Cardinal; message : string);
@@ -987,6 +1028,7 @@ class procedure Assert.AreNotEqual<T>(const left, right: T; const message: strin
 var
   comparer : IComparer<T>;
   leftValue, rightValue : TValue;
+  sLeft, sRight : string;
 begin
   comparer := TComparer<T>.Default;
   if comparer.Compare(right,left) = 0 then
@@ -994,7 +1036,7 @@ begin
     leftValue := TValue.From<T>(left);
     rightValue := TValue.From<T>(right);
 
-    Fail(Format('left %s Not Equal To %s',[leftValue.AsString,rightValue.AsString]), ReturnAddress);
+    Fail(Format('left %s Not Equal To %s',[leftValue.ToString,rightValue.ToString]), ReturnAddress);
   end;
 end;
 {$ELSE}
@@ -1004,6 +1046,30 @@ begin
     Fail(Format('%d equals right %d %s' ,[left, right, message]), ReturnAddress);
 end;
 {$ENDIF}
+
+class procedure Assert.AreNotEqual(const left, right: Extended; const message: string);
+var
+  tolerance : Extended;
+begin
+  tolerance := 0;
+  Assert.AreNotEqual(left,right,tolerance,message);
+
+end;
+
+class procedure Assert.AreNotEqual(const left, right: Double; const message: string);
+var
+  tolerance : double;
+begin
+  tolerance := 0;
+  Assert.AreNotEqual(left,right,tolerance,message);
+end;
+
+class procedure Assert.AreNotEqual(const left, right, tolerance: double; const message: string);
+begin
+  if Math.SameValue(left, right, tolerance) then
+    Fail(Format('%g equals right %g %s' ,[left,right,message]), ReturnAddress);
+end;
+
 
 class procedure Assert.AreNotEqualMemory(const left, right: Pointer; const size: Cardinal; message: string);
 begin
@@ -1289,41 +1355,21 @@ begin
 end;
 
 class procedure Assert.WillRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass; const msg : string);
-  function GetMsg : string;
-  begin
-    if msg <> '' then
-      result :=  #13#10 + msg
-    else
-      result := '';
-  end;
 begin
   try
     AMethod;
   except
-    //we expect an exception to be thrown.
-    on e : Exception do
+    on E: Exception do
     begin
-      if exceptionClass <> nil then
-      begin
-        if e.ClassType <> exceptionClass then
-          Fail(Format('Method raised [%s] was expecting [%s]. %s', [e.ClassName, exceptionClass.ClassName, e.message]), ReturnAddress)
-        else
-          exit;
-      end;
+      CheckExceptionClass(e, exceptionClass);
+      Exit;
     end;
   end;
-  Fail('Method did not throw any exceptions.' + GetMsg, ReturnAddress);
+  Fail('Method did not throw any exceptions.' + AddLineBreak(msg), ReturnAddress);
 end;
 
 
 class procedure Assert.WillNotRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass; const msg : string);
-  function GetMsg : string;
-  begin
-    if msg <> '' then
-      result :=  #13#10 + msg
-    else
-      result := '';
-  end;
 begin
   try
     AMethod;
@@ -1333,7 +1379,7 @@ begin
       if exceptionClass <> nil then
       begin
         if e.ClassType = exceptionClass then
-           Fail('Method raised an exception of type : ' + exceptionClass.ClassName + #13#10 + e.Message + GetMsg, ReturnAddress);
+           Fail('Method raised an exception of type : ' + exceptionClass.ClassName + sLineBreak + e.Message + AddLineBreak(msg), ReturnAddress);
       end
       else
         Fail(Format('Method raised [%s] was expecting not to raise [%s]. %s', [e.ClassName, exceptionClass.ClassName, e.message]), ReturnAddress);
@@ -1351,6 +1397,22 @@ begin
     exceptionClass, msg);
 end;
 
+class procedure Assert.WillRaiseWithMessage(const AMethod: TTestLocalMethod; const exceptionClass: ExceptClass;const exceptionMsg, msg: string);
+begin
+  try
+    AMethod;
+  except
+    on E: Exception do
+    begin
+      CheckExceptionClass(E, exceptionClass);
+      if (exceptionMsg <> '') and (not SameStr(E.Message, exceptionMsg)) then
+        Fail(Format('Exception [%s] was raised with message [%s] was expecting [%s] %s', [E.ClassName, E.Message, exceptionMsg, msg]));
+      Exit;
+    end;
+  end;
+  Fail('Method did not throw any exceptions.' + AddLineBreak(msg), ReturnAddress);
+end;
+
 class procedure Assert.AreEqual(const left : string; const right : string; const message : string);
 begin
   Assert.AreEqual(left, right, true, message);
@@ -1365,6 +1427,15 @@ begin
   end
   else if not SameStr(left,right) then
       Fail(Format('[%s] is Not Equal to [%s] %s',[left,right,message]), ReturnAddress);
+end;
+
+class procedure Assert.CheckExceptionClass(E: Exception; const exceptionClass: ExceptClass);
+begin
+  if exceptionClass = nil then
+    Exit;
+
+  if E.ClassType <> exceptionClass then
+    Fail(Format('Method raised [%s] was expecting [%s]. %s', [E.ClassName, exceptionClass.ClassName, E.message]), ReturnAddress);
 end;
 
 class procedure Assert.Contains(const theString : string; const subString : string; const ignoreCase : boolean; const message : string);
@@ -1447,7 +1518,7 @@ end;
 class constructor TDUnitX.Create;
 begin
   RegisteredFixtures := TDictionary<TClass,string>.Create;
-
+  RegisteredPlugins  := TList<IPlugin>.Create;
   //Make sure we have at least a dummy memory leak monitor registered.
   if not TDUnitXIoC.DefaultContainer.HasService<IMemoryLeakMonitor> then
     DUnitX.MemoryLeakMonitor.Default.RegisterDefaultProvider;
@@ -1470,6 +1541,14 @@ end;
 class destructor TDUnitX.Destroy;
 begin
   RegisteredFixtures.Free;
+  RegisteredPlugins.Free;
+end;
+
+class procedure TDUnitX.RegisterPlugin(const plugin: IPlugin);
+begin
+  if plugin = nil then
+    raise Exception.Create('Nil plug registered!');
+  RegisteredPlugins.Add(plugin);
 end;
 
 class procedure TDUnitX.RegisterTestFixture(const AClass: TClass; const AName : string);
@@ -1571,9 +1650,9 @@ begin
   result := FCaseInfo.Values;
 end;
 
-{ RepeatAttribute }
+{ RepeatTestAttribute }
 
-constructor RepeatAttribute.Create(const ACount: Cardinal);
+constructor RepeatTestAttribute.Create(const ACount: Cardinal);
 begin
   FCount := ACount;
 end;
@@ -1589,5 +1668,6 @@ begin
 end;
 
 initialization
+  TDUnitX.RegisterPlugin(TDUnitXFixtureProviderPlugin.Create);
 
 end.
