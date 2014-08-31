@@ -36,7 +36,6 @@ type
   [TestFixture]
   TTestsAssert = class
   private
-    procedure WillNotRaise_With_NonDescendingClass;
   published
     [Test]
     procedure Pass_Throws_ETestPass_Exception;
@@ -112,9 +111,14 @@ type
     procedure WillNotRaise_With_DescendingClass_Positive;
     [Test]
     procedure WillNotRaise_With_DescendingClass_Negative;
+    [Test]
+    procedure WillNotRaise_With_NoClass;
 
+    [Test]
+    procedure Test_Implements_Will_Fail_If_Not_Implemented;
 
-
+    [Test]
+    procedure Test_Implements_Will_Pass_If_Implemented;
 
 
   end;
@@ -138,6 +142,16 @@ type
   end;
   TMockClassTwo = class(TObject)
   end;
+
+  IAmImplemented = interface
+    ['{4B503CDD-6262-403C-BF68-5D5DE01C3B13}']
+  end;
+
+  TImplemented = class(TInterfacedObject,IAmImplemented)
+  end;
+
+
+
 
 { TTestAssert }
 
@@ -220,6 +234,31 @@ begin
 end;
 
 
+procedure TTestsAssert.Test_Implements_Will_Fail_If_Not_Implemented;
+var
+  obj : IInterface;
+begin
+  obj := TInterfacedObject.Create;
+  Assert.WillRaise(
+  procedure
+  begin
+    Assert.Implements<IAmImplemented>(obj);
+  end,
+  ETestFailure);
+end;
+
+procedure TTestsAssert.Test_Implements_Will_Pass_If_Implemented;
+var
+  obj : IInterface;
+begin
+  obj := TImplemented.Create;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.Implements<IAmImplemented>(obj);
+    end);
+end;
+
 procedure TTestsAssert.WillNotRaise_With_DescendingClass_Negative;
 begin
  Assert.WillRaise(
@@ -274,10 +313,24 @@ begin
    EStreamError,'');
 end;
 
-procedure TTestsAssert.WillNotRaise_With_NonDescendingClass;
+procedure TTestsAssert.WillNotRaise_With_NoClass;
+const
+  EXPECTED_EXCEPTION_MSG = 'Passing Message';
 begin
-
+ Assert.WillRaise(
+ procedure
+ begin
+   Assert.WillNotRaise(
+     procedure
+     begin
+       // Raise an exception
+       raise Exception.Create('Error Message');
+     end);
+ end,
+ ETestFailure,
+ EXPECTED_EXCEPTION_MSG);
 end;
+
 
 procedure TTestsAssert.WillRaiseAny;
 begin
